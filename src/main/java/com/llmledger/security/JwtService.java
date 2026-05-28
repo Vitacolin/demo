@@ -25,15 +25,25 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String username) {
+    public String generateToken(String username, String role) {
         Instant now = Instant.now();
         Instant exp = now.plus(expireMinutes, ChronoUnit.MINUTES);
         return Jwts.builder()
                 .subject(username)
+                .claim("role", role)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(key())
                 .compact();
+    }
+
+    public String extractRole(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return claims.get("role", String.class);
     }
 
     public String extractUsername(String token) {

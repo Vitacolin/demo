@@ -23,6 +23,8 @@ public class TransactionCreateRequest {
 
     private String ocr_text;
 
+    private Long familyId;
+
     public Double getAmount() {
         return amount;
     }
@@ -77,5 +79,13 @@ public class TransactionCreateRequest {
 
     public void setOcr_text(String ocr_text) {
         this.ocr_text = ocr_text;
+    }
+
+    public Long getFamilyId() {
+        return familyId;
+    }
+
+    public void setFamilyId(Long familyId) {
+        this.familyId = familyId;
     }
 }

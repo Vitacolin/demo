@@ -5,17 +5,19 @@ import java.time.LocalDateTime;
 public class UserResponse {
     private Long id;
     private String username;
-    private String avatar_url;
-    private LocalDateTime created_at;
+    private String avatarUrl;
+    private LocalDateTime createdAt;
+    private String role;
 
     public UserResponse() {
     }
 
-    public UserResponse(Long id, String username, String avatarUrl, LocalDateTime createdAt) {
+    public UserResponse(Long id, String username, String avatarUrl, LocalDateTime createdAt, String role) {
         this.id = id;
         this.username = username;
-        this.avatar_url = avatarUrl;
-        this.created_at = createdAt;
+        this.avatarUrl = avatarUrl;
+        this.createdAt = createdAt;
+        this.role = role;
     }
 
     public Long getId() {
@@ -26,11 +28,15 @@ public class UserResponse {
         return username;
     }
 
-    public String getAvatar_url() {
-        return avatar_url;
+    public String getAvatarUrl() {
+        return avatarUrl;
     }
 
-    public LocalDateTime getCreated_at() {
-        return created_at;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getRole() {
+        return role;
     }
 }

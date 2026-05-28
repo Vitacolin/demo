@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试 Ollama qwen3:8b JSON 输出</title>
+    <style>
+        body {
+            font-family: 'Consolas', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        h1 {
+            color: #569cd6;
+        }
+
+        h2 {
+            color: #4ec9b0;
+            margin-top: 30px;
+        }
+
+        .test-box {
+            background: #252526;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #569cd6;
+        }
+
+        .prompt {
+            color: #ce9178;
+            margin-bottom: 10px;
+        }
+
+        .response {
+            color: #9cdcfe;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+
+        .raw-json {
+            color: #dcdcaa;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+
+        button {
+            background-color: #0e639c;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #1177bb;
+        }
+
+        .error {
+            color: #f14c4c;
+        }
+
+        .success {
+            color: #89d185;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔧 Ollama qwen3:8b JSON 输出调试</h1>
+
+    <div class="test-box">
+        <h2>测试 1: 简单的账单提取（带 /no_think）</h2>
+        <button onclick="test1()">运行测试</button>
+        <div id="test1"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>测试 2: 带格式的 JSON 输出（不带 /no_think）</h2>
+        <button onclick="test2()">运行测试</button>
+        <div id="test2"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>测试 3: 最简化的提示词</h2>
+        <button onclick="test3()">运行测试</button>
+        <div id="test3"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>测试 4: 英文提示词</h2>
+        <button onclick="test4()">运行测试</button>
+        <div id="test4"></div>
+    </div>
+
+    <script>
+        async function callOllama(prompt, think = false) {
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'qwen3:8b',
+                        prompt: prompt,
+                        stream: false,
+                        think: think,
+                        format: 'json'
+                    })
+                });
+
+                const data = await response.json();
+                const duration = Date.now() - startTime;
+
+                return {
+                    success: true,
+                    response: data.response,
+                    thinking: data.thinking,
+                    duration: duration,
+                    raw: data
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function test1() {
+            const div = document.getElementById('test1');
+            div.innerHTML = '<p style="color: #dcdcaa;">正在测试...</p>';
+
+            const result = await callOllama(
+                '你是一个记账助手。请从"今天中午吃饭花了50元"中提取账单，严格输出JSON格式: {"transactions":[{"amount":数字,"description":"描述","type":"类型","category":"分类"}]}',
+                false
+            );
+
+            if (result.success) {
+                div.innerHTML = `
+                    <p class="success">✅ 响应时间: ${result.duration}ms</p>
+                    <p class="prompt"><strong>提示词:</strong></p>
+                    <pre class="raw-json">你是一个记账助手。请从"今天中午吃饭花了50元"中提取账单，严格输出JSON格式: {"transactions":[{"amount":数字,"description":"描述","type":"类型","category":"分类"}]}</pre>
+                    <p class="prompt"><strong>AI 响应 (response):</strong></p>
+                    <pre class="response">${result.response}</pre>
+                    ${result.thinking ? `<p class="prompt"><strong>思考过程 (thinking):</strong></p><pre class="raw-json">${result.thinking}</pre>` : ''}
+                `;
+            } else {
+                div.innerHTML = `<p class="error">❌ 错误: ${result.error}</p>`;
+            }
+        }
+
+        async function test2() {
+            const div = document.getElementById('test2');
+            div.innerHTML = '<p style="color: #dcdcaa;">正在测试...</p>';
+
+            const result = await callOllama(
+                'Extract transaction from "bought lunch for 50 yuan" as JSON: {"transactions":[{"amount":50,"description":"lunch","type":"expense","category":"food"}]}',
+                false
+            );
+
+            if (result.success) {
+                div.innerHTML = `
+                    <p class="success">✅ 响应时间: ${result.duration}ms</p>
+                    <p class="prompt"><strong>AI 响应:</strong></p>
+                    <pre class="response">${result.response}</pre>
+                    ${result.thinking ? `<p class="prompt"><strong>思考过程:</strong></p><pre class="raw-json">${result.thinking}</pre>` : ''}
+                `;
+            } else {
+                div.innerHTML = `<p class="error">❌ 错误: ${result.error}</p>`;
+            }
+        }
+
+        async function test3() {
+            const div = document.getElementById('test3');
+            div.innerHTML = '<p style="color: #dcdcaa;">正在测试...</p>';
+
+            const result = await callOllama(
+                '{"transactions":[{"amount":100,"description":"test","type":"expense","category":"food"}]}',
+                false
+            );
+
+            if (result.success) {
+                div.innerHTML = `
+                    <p class="success">✅ 响应时间: ${result.duration}ms</p>
+                    <p class="prompt"><strong>AI 响应:</strong></p>
+                    <pre class="response">${result.response}</pre>
+                `;
+            } else {
+                div.innerHTML = `<p class="error">❌ 错误: ${result.error}</p>`;
+            }
+        }
+
+        async function test4() {
+            const div = document.getElementById('test4');
+            div.innerHTML = '<p style="color: #dcdcaa;">正在测试...</p>';
+
+            const result = await callOllama(
+                'You are an accounting assistant. Extract transaction from "spent 50 yuan on lunch". Output ONLY valid JSON: {"transactions":[{"amount":50,"description":"lunch","type":"expense","category":"food"}]}',
+                false
+            );
+
+            if (result.success) {
+                div.innerHTML = `
+                    <p class="success">✅ 响应时间: ${result.duration}ms</p>
+                    <p class="prompt"><strong>AI 响应:</strong></p>
+                    <pre class="response">${result.response}</pre>
+                `;
+            } else {
+                div.innerHTML = `<p class="error">❌ 错误: ${result.error}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

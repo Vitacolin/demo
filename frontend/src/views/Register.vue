@@ -6,7 +6,7 @@
         <span class="brand-sub">Ledger Pro</span>
       </div>
       <h2 class="auth-title">注册账号</h2>
-      
+
       <n-form :model="form" @submit.prevent="handleRegister" class="auth-form">
         <n-form-item label="用户名">
           <n-input v-model:value="form.username" placeholder="请输入用户名" />
@@ -15,12 +15,13 @@
           <n-input v-model:value="form.password" type="password" show-password-on="click" placeholder="请输入密码" />
         </n-form-item>
         <n-form-item label="确认密码">
-          <n-input v-model:value="form.confirmPassword" type="password" show-password-on="click" placeholder="请再次输入密码" />
+          <n-input v-model:value="form.confirmPassword" type="password" show-password-on="click"
+            placeholder="请再次输入密码" />
         </n-form-item>
-        
+
         <n-button type="primary" block @click="handleRegister" :loading="loading" class="submit-btn">注册并登录</n-button>
       </n-form>
-      
+
       <div class="auth-links">
         已有账号？ <router-link to="/login" class="highlight-link">去登录</router-link>
       </div>
@@ -31,7 +32,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { NForm, NFormItem, NInput, NButton, useMessage } from 'naive-ui'
-import axios from 'axios'
+import api from '../api'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/auth'
 
@@ -51,29 +52,28 @@ const handleRegister = async () => {
     message.warning('请输入完整信息')
     return
   }
-  
+
   if (form.value.password !== form.value.confirmPassword) {
     message.warning('两次密码不一致')
     return
   }
-  
+
   loading.value = true
   try {
     // 1. 注册
-    await axios.post('http://localhost:8000/api/auth/register', {
+    await api.post('/auth/register', {
       username: form.value.username,
       password: form.value.password
     })
-    
+
     // 2. 自动登录
-    const formData = new FormData()
-    formData.append('username', form.value.username)
-    formData.append('password', form.value.password)
-    
-    const loginRes = await axios.post('http://localhost:8000/api/auth/login', formData)
+    const loginRes = await api.post('/auth/login', {
+      username: form.value.username,
+      password: form.value.password
+    })
     authStore.setToken(loginRes.data.access_token)
     await authStore.fetchUser()
-    
+
     message.success('注册成功，已自动登录')
     router.push('/dashboard')
   } catch (error: any) {

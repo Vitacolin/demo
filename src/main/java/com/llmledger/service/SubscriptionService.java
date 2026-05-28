@@ -30,7 +30,7 @@ public class SubscriptionService {
         return subscriptionRepository.save(sub);
     }
 
-    public List<Subscription> list(User owner, int skip, int limit) {
+    public List<Subscription> list(User owner, int skip, int limit, Long familyId) {
         List<Subscription> list = subscriptionRepository.findByOwnerIdOrderByNextBillingDateAsc(owner.getId());
         int from = Math.min(skip, list.size());
         int to = Math.min(skip + limit, list.size());

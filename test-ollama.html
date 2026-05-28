@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama qwen3:8b 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            min-height: 50px;
+        }
+
+        .error {
+            border-left-color: #f44336;
+            color: #f44336;
+        }
+
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🤖 Ollama qwen3:8b 功能测试</h1>
+
+        <div class="test-section">
+            <h3>测试 1: 基础对话测试</h3>
+            <p>测试 Ollama 是否能正常响应中文</p>
+            <button onclick="testBasicChat()">开始测试</button>
+            <div id="result1" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试 2: 记账信息提取测试</h3>
+            <p>测试 AI 能否从文本中提取账单信息并返回 JSON</p>
+            <button onclick="testTransactionParsing()">开始测试</button>
+            <div id="result2" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试 3: 财务建议生成测试</h3>
+            <p>测试 AI 能否根据账单数据生成财务建议</p>
+            <button onclick="testFinancialAdvice()">开始测试</button>
+            <div id="result3" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>状态检查</h3>
+            <button onclick="checkOllamaStatus()">检查 Ollama 状态</button>
+            <div id="result4" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        async function checkOllamaStatus() {
+            const resultDiv = document.getElementById('result4');
+            resultDiv.innerHTML = '<p class="loading">正在检查 Ollama 状态...</p>';
+
+            try {
+                const response = await fetch('http://localhost:11434/api/tags');
+                const data = await response.json();
+
+                let html = '<p><strong>✅ Ollama 服务正常</strong></p>';
+                html += '<p>已安装的模型:</p><ul>';
+                data.models.forEach(model => {
+                    html += `<li><strong>${model.name}</strong> (大小: ${(model.size / 1024 / 1024 / 1024).toFixed(2)} GB)</li>`;
+                });
+                html += '</ul>';
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error"><strong>❌ Ollama 服务未运行</strong></p><p>错误: ${error.message}</p><p>请确保 Ollama 正在运行 (运行 'ollama serve')</p>`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testBasicChat() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '<p class="loading">正在调用 qwen3:8b ...</p>';
+
+            try {
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'qwen3:8b',
+                        prompt: '/no_think 你好，请简单介绍一下自己',
+                        stream: false,
+                        think: false
+                    })
+                });
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<p><strong>✅ 测试成功!</strong></p><pre>${data.response}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error"><strong>❌ 测试失败</strong></p><p>错误: ${error.message}</p>`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testTransactionParsing() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '<p class="loading">正在调用 AI 记账功能...</p>';
+
+            try {
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'qwen3:8b',
+                        prompt: `/no_think 请从以下文本中提取账单信息，严格输出 JSON 格式:
+"今天中午和朋友在餐厅吃饭，花了120元，下午又买了50元的零食"
+
+请严格输出以下 JSON 格式，不要有其他内容:
+{"transactions":[{"amount":数字,"description":"描述","type":"income或expense","category":"分类"}]}`,
+                        stream: false,
+                        think: false,
+                        format: 'json'
+                    })
+                });
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<p><strong>✅ 测试成功!</strong></p><pre>${data.response}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error"><strong>❌ 测试失败</strong></p><p>错误: ${error.message}</p>`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testFinancialAdvice() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.innerHTML = '<p class="loading">正在生成财务建议...</p>';
+
+            try {
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'qwen3:8b',
+                        prompt: `/no_think 你是一个专业的理财师。用户最近的支出情况:
+- 餐饮: 2000元
+- 交通: 500元
+- 购物: 1500元
+- 娱乐: 800元
+
+请用简洁专业的语言，给出2-3条理财建议。`,
+                        stream: false,
+                        think: false
+                    })
+                });
+
+                const data = await response.json();
+                resultDiv.innerHTML = `<p><strong>✅ 测试成功!</strong></p><pre>${data.response}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error"><strong>❌ 测试失败</strong></p><p>错误: ${error.message}</p>`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        // 页面加载时自动检查状态
+        window.onload = function () {
+            checkOllamaStatus();
+        };
+    </script>
+</body>
+
+</html>

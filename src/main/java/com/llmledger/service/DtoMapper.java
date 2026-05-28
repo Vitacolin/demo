@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 public class DtoMapper {
 
     public UserResponse toUserResponse(User user) {
-        return new UserResponse(user.getId(), user.getUsername(), user.getAvatarUrl(), user.getCreatedAt());
+        return new UserResponse(user.getId(), user.getUsername(), user.getAvatarUrl(), user.getCreatedAt(),
+                user.getRole().name());
     }
 
     public TransactionResponse toTransactionResponse(Transaction tx) {
@@ -26,8 +27,7 @@ public class DtoMapper {
                 tx.getReceiptUrl(),
                 tx.getOcrText(),
                 tx.getDate(),
-                tx.getOwner().getId()
-        );
+                tx.getOwner().getId());
     }
 
     public SubscriptionResponse toSubscriptionResponse(Subscription sub) {
@@ -39,7 +39,6 @@ public class DtoMapper {
                 sub.getNextBillingDate(),
                 sub.getCategory(),
                 sub.getIsActive(),
-                sub.getOwner().getId()
-        );
+                sub.getOwner().getId());
     }
 }

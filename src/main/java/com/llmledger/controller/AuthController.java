@@ -38,10 +38,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public TokenResponse login(@RequestParam("username") String username,
-                               @RequestParam("password") String password) {
-        User user = authService.login(username, password);
-        String token = jwtService.generateToken(user.getUsername());
+    public TokenResponse login(@RequestBody UserLoginRequest request) {
+        User user = authService.login(request.getUsername(), request.getPassword());
+        String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
         return new TokenResponse(token);
     }
 
@@ -53,7 +52,7 @@ public class AuthController {
 
     @PutMapping("/password")
     public MessageResponse updatePassword(@Valid @RequestBody PasswordChangeRequest request,
-                                          Authentication authentication) {
+            Authentication authentication) {
         User user = (User) authentication.getPrincipal();
         authService.updatePassword(user, request);
         return new MessageResponse("success", "Password updated");
@@ -61,7 +60,7 @@ public class AuthController {
 
     @PutMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AvatarResponse updateAvatar(@RequestPart("file") MultipartFile file,
-                                       Authentication authentication) throws IOException {
+            Authentication authentication) throws IOException {
         if (file.getContentType() == null || !file.getContentType().startsWith("image/")) {
             throw new IllegalArgumentException("File must be an image");
         }

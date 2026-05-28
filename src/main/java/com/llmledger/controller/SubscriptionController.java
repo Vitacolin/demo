@@ -26,7 +26,7 @@ public class SubscriptionController {
 
     @PostMapping
     public SubscriptionResponse create(@RequestBody SubscriptionCreateRequest request,
-                                       Authentication authentication) {
+            Authentication authentication) {
         User user = (User) authentication.getPrincipal();
         Subscription sub = subscriptionService.create(request, user);
         return mapper.toSubscriptionResponse(sub);
@@ -34,10 +34,12 @@ public class SubscriptionController {
 
     @GetMapping
     public List<SubscriptionResponse> list(@RequestParam(defaultValue = "0") int skip,
-                                           @RequestParam(defaultValue = "100") int limit,
-                                           Authentication authentication) {
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(required = false) Long familyId,
+            Authentication authentication) {
         User user = (User) authentication.getPrincipal();
-        return subscriptionService.list(user, skip, limit).stream().map(mapper::toSubscriptionResponse).toList();
+        return subscriptionService.list(user, skip, limit, familyId).stream().map(mapper::toSubscriptionResponse)
+                .toList();
     }
 
     @DeleteMapping("/{subId}")

@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import api from '../api'
 
 const assetsData = ref({
   net_worth: 0,
@@ -52,7 +52,7 @@ const assetsData = ref({
 
 const fetchAssetsData = async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/assets')
+    const res = await api.get('/assets')
     assetsData.value = res.data
   } catch (error) {
     console.error("Failed to fetch assets data", error)
@@ -86,7 +86,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 40px;
-  background: linear-gradient(135deg, rgba(255,107,53,0.15) 0%, rgba(18,18,18,0) 100%);
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.15) 0%, rgba(18, 18, 18, 0) 100%);
   border-left: 4px solid var(--accent-orange);
 }
 
@@ -105,7 +105,7 @@ onMounted(() => {
   font-weight: 900;
   font-family: 'Fira Code', monospace;
   margin: 10px 0;
-  text-shadow: 0 4px 12px rgba(255,107,53,0.2);
+  text-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
 }
 
 .equation {
@@ -119,8 +119,10 @@ onMounted(() => {
 
 .mini-chart-placeholder {
   height: 100px;
-  border: 1px dashed rgba(255,255,255,0.2);
-  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
   border-radius: 8px;
 }
@@ -136,7 +138,7 @@ onMounted(() => {
   margin-bottom: 20px;
   color: var(--text-main);
   font-size: 1.2rem;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 10px;
 }
 
@@ -169,12 +171,17 @@ onMounted(() => {
   font-weight: bold;
 }
 
-.acc-bal.debt { color: var(--error-color); }
-.acc-bal.receive { color: var(--success-color); }
+.acc-bal.debt {
+  color: var(--error-color);
+}
+
+.acc-bal.receive {
+  color: var(--success-color);
+}
 
 .due {
   font-size: 0.75rem;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 8px;

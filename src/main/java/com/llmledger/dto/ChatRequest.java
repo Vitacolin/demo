@@ -9,6 +9,8 @@ public class ChatRequest {
 
     private String model = "qwen2.5:7b";
 
+    private Long familyId;
+
     public String getText() {
         return text;
     }
@@ -23,5 +25,13 @@ public class ChatRequest {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public Long getFamilyId() {
+        return familyId;
+    }
+
+    public void setFamilyId(Long familyId) {
+        this.familyId = familyId;
     }
 }

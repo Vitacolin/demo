@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-LlmLedgerApplication<backend-springboot>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.llmledger.LlmLedgerApplication",
+      "projectName": "backend-springboot",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

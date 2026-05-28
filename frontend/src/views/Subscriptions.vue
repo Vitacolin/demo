@@ -25,14 +25,14 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card-body">
           <div class="amount-display">
             <span class="currency">¥</span>
             <span class="amount">{{ sub.amount.toFixed(2) }}</span>
             <span class="cycle">/ {{ getCycleLabel(sub.cycle) }}</span>
           </div>
-          
+
           <div class="billing-info">
             <div class="info-row">
               <span class="label">下次扣费日</span>
@@ -62,10 +62,11 @@
         <n-form-item label="账单名称" path="name">
           <n-input v-model:value="newSub.name" placeholder="如：Netflix, 房租, 健身房" />
         </n-form-item>
-        
+
         <div class="form-row">
           <n-form-item label="金额" path="amount" style="flex: 1">
-            <n-input-number v-model:value="newSub.amount" placeholder="0.00" :min="0" :precision="2" style="width: 100%" />
+            <n-input-number v-model:value="newSub.amount" placeholder="0.00" :min="0" :precision="2"
+              style="width: 100%" />
           </n-form-item>
           <n-form-item label="周期" path="cycle" style="flex: 1">
             <n-select v-model:value="newSub.cycle" :options="cycleOptions" :consistent-menu-width="false" />
@@ -92,9 +93,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { NModal, NForm, NFormItem, NInput, NInputNumber, NSelect, NDatePicker, NButton } from 'naive-ui'
-import axios from 'axios'
-
-const API_BASE = 'http://127.0.0.1:8000/api'
+import api from '../api'
 
 interface Subscription {
   id: number
@@ -135,7 +134,7 @@ const categoryOptions = [
 const fetchSubscriptions = async () => {
   loading.value = true
   try {
-    const res = await axios.get(`${API_BASE}/subscriptions`)
+    const res = await api.get('/subscriptions')
     subscriptions.value = res.data
   } catch (error) {
     console.error("获取订阅失败:", error)
@@ -153,7 +152,7 @@ const handleAddSubmit = async () => {
       category: newSub.value.category,
       next_billing_date: new Date(newSub.value.next_billing_date_ts).toISOString()
     }
-    await axios.post(`${API_BASE}/subscriptions`, payload)
+    await api.post('/subscriptions', payload)
     showAddModal.value = false
     // Reset form
     newSub.value = {
@@ -172,7 +171,7 @@ const handleAddSubmit = async () => {
 
 const toggleStatus = async (id: number) => {
   try {
-    await axios.put(`${API_BASE}/subscriptions/${id}/toggle`)
+    await api.put(`/subscriptions/${id}/toggle`)
     fetchSubscriptions()
   } catch (error) {
     console.error("切换状态失败:", error)
@@ -182,7 +181,7 @@ const toggleStatus = async (id: number) => {
 const deleteSub = async (id: number) => {
   if (!confirm("确定要删除这个周期性账单吗？")) return
   try {
-    await axios.delete(`${API_BASE}/subscriptions/${id}`)
+    await api.delete(`/subscriptions/${id}`)
     fetchSubscriptions()
   } catch (error) {
     console.error("删除失败:", error)
@@ -227,8 +226,15 @@ onMounted(() => {
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page-header {
@@ -311,6 +317,7 @@ onMounted(() => {
   opacity: 0.6;
   filter: grayscale(0.5);
 }
+
 .sub-card.inactive::before {
   background: var(--text-muted);
 }

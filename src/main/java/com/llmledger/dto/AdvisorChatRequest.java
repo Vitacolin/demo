@@ -4,6 +4,7 @@ public class AdvisorChatRequest {
     private String question;
     private String persona = "roast";
     private String currentReport;
+    private Long familyId;
 
     public String getQuestion() {
         return question;
@@ -27,5 +28,13 @@ public class AdvisorChatRequest {
 
     public void setCurrentReport(String currentReport) {
         this.currentReport = currentReport;
+    }
+
+    public Long getFamilyId() {
+        return familyId;
+    }
+
+    public void setFamilyId(Long familyId) {
+        this.familyId = familyId;
     }
 }

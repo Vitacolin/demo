@@ -49,6 +49,17 @@ const routes: RouteRecordRaw[] = [
         path: 'advisor',
         name: 'Advisor',
         component: () => import('../views/Advisor.vue')
+      },
+      {
+        path: 'families',
+        name: 'Families',
+        component: () => import('../views/Families.vue')
+      },
+      {
+        path: 'system',
+        name: 'System',
+        component: () => import('../views/System.vue'),
+        meta: { requiresAdmin: true }
       }
     ]
   }
@@ -61,9 +72,12 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
+
   if (to.meta.requiresAuth !== false && !authStore.isAuthenticated) {
     next('/login')
   } else if ((to.path === '/login' || to.path === '/register') && authStore.isAuthenticated) {
+    next('/dashboard')
+  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next('/dashboard')
   } else {
     next()

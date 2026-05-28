@@ -18,6 +18,9 @@
           <router-link to="/transactions" class="nav-item" active-class="active">
             <span class="nav-text">账单图谱</span>
           </router-link>
+          <router-link to="/families" class="nav-item" active-class="active">
+            <span class="nav-text">家庭账本</span>
+          </router-link>
           <router-link to="/subscriptions" class="nav-item" active-class="active">
             <span class="nav-text">周期账单</span>
           </router-link>
@@ -27,6 +30,9 @@
           <router-link to="/advisor" class="nav-item" active-class="active">
             <span class="nav-text">AI 顾问</span>
           </router-link>
+          <router-link v-if="authStore.isAdmin" to="/system" class="nav-item admin-nav" active-class="active">
+            <span class="nav-text">系统管理</span>
+          </router-link>
         </nav>
 
         <div class="user-profile">
@@ -35,12 +41,9 @@
             <span class="status">● 在线</span>
           </div>
           <n-dropdown :options="userOptions" @select="handleSelect">
-            <n-avatar 
-              round 
-              size="medium" 
-              :src="authStore.user?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ff6b35'" 
-              style="cursor: pointer;"
-            />
+            <n-avatar round size="medium"
+              :src="authStore.user?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ff6b35'"
+              style="cursor: pointer;" />
           </n-dropdown>
         </div>
       </div>
@@ -76,19 +79,10 @@
     <!-- 修改头像弹窗 -->
     <n-modal v-model:show="showAvatarModal" preset="card" title="修改头像" class="aesthetic-modal" style="width: 400px">
       <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
-        <n-avatar 
-          round 
-          :size="100" 
-          :src="authStore.user?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ff6b35'" 
-        />
-        <n-upload
-          action="http://localhost:8000/api/auth/avatar"
-          :headers="uploadHeaders"
-          accept="image/*"
-          :show-file-list="false"
-          @finish="handleAvatarSuccess"
-          @error="handleAvatarError"
-        >
+        <n-avatar round :size="100"
+          :src="authStore.user?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=ff6b35'" />
+        <n-upload action="http://localhost:8080/api/auth/avatar" :headers="uploadHeaders" accept="image/*"
+          :show-file-list="false" @finish="handleAvatarSuccess" @error="handleAvatarError">
           <n-button type="primary">点击上传新头像</n-button>
         </n-upload>
       </div>
@@ -101,7 +95,7 @@ import { ref, onMounted, computed } from 'vue'
 import { NAvatar, NDropdown, NModal, NForm, NFormItem, NInput, NButton, NUpload, useMessage } from 'naive-ui'
 import { useAuthStore } from '../store/auth'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '../api'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -142,7 +136,7 @@ const submitPassword = async () => {
     return
   }
   try {
-    await axios.put('http://localhost:8000/api/auth/password', passwordForm.value)
+    await api.put('/auth/password', passwordForm.value)
     message.success('密码修改成功，请重新登录')
     showPasswordModal.value = false
     authStore.clearAuth()

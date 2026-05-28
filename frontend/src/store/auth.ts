@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import api from '../api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: localStorage.getItem('token') || null,
-    user: null as any
+    user: null as any,
+    isAdmin: false
   }),
   getters: {
     isAuthenticated: (state) => !!state.token
@@ -14,18 +15,32 @@ export const useAuthStore = defineStore('auth', {
       this.token = token
       localStorage.setItem('token', token)
     },
+    setIsAdmin(isAdmin: boolean) {
+      this.isAdmin = isAdmin
+    },
     clearAuth() {
       this.token = null
       this.user = null
+      this.isAdmin = false
       localStorage.removeItem('token')
+      localStorage.removeItem('loginRole')
     },
     async fetchUser() {
       if (!this.token) return
       try {
-        const res = await axios.get('http://localhost:8000/api/auth/me', {
-          headers: { Authorization: `Bearer ${this.token}` }
-        })
+        const res = await api.get('/auth/me')
         this.user = res.data
+
+        const userInfo = await api.get('/system/me')
+
+        const savedRole = localStorage.getItem('loginRole')
+        if (savedRole === 'admin') {
+          this.isAdmin = userInfo.data.isAdmin
+        } else if (savedRole === 'user') {
+          this.isAdmin = false
+        } else {
+          this.isAdmin = userInfo.data.isAdmin
+        }
       } catch (error) {
         this.clearAuth()
       }

@@ -44,6 +44,9 @@ public class Transaction {
     @JoinColumn(name = "ledger_id")
     private Ledger ledgerRef;
 
+    @Column(name = "family_id")
+    private Long familyId;
+
     @PrePersist
     public void prePersist() {
         if (date == null) {
@@ -125,5 +128,13 @@ public class Transaction {
 
     public void setOwner(User owner) {
         this.owner = owner;
+    }
+
+    public Long getFamilyId() {
+        return familyId;
+    }
+
+    public void setFamilyId(Long familyId) {
+        this.familyId = familyId;
     }
 }

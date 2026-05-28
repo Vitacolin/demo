@@ -3,6 +3,12 @@
     <header class="page-header">
       <h2 class="page-title">专属财务顾问 <span class="highlight">/ AI Advisor</span></h2>
       <div class="header-actions">
+        <!-- 家庭账本选择 -->
+        <div class="family-selector" v-if="families.length > 0" style="margin-right: 16px;">
+          <span>账本范围：</span>
+          <n-select v-model:value="selectedFamilyId" :options="familyOptions" placeholder="个人账本" style="width: 180px;"
+            @update:value="onFamilyChange" />
+        </div>
         <div class="date-range-picker">
           <label>分析时段：</label>
           <input type="date" v-model="startDate" class="date-input" />
@@ -22,6 +28,7 @@
         <div class="report-header">
           <h3>财务诊断报告</h3>
           <div class="report-meta">
+            <span class="scope-tag" v-if="selectedFamilyId">📦 {{ selectedFamilyName }}</span>
             <span class="period-tag" v-if="periodLabel">{{ periodLabel }}</span>
             <span class="date">{{ new Date().toLocaleString() }}</span>
           </div>
@@ -31,7 +38,7 @@
           <div v-if="loading" class="loading-text">
             正在分析您的财务数据并生成报告... 请稍候...
           </div>
-          <div v-else-if="report" class="greeting" style="white-space: pre-wrap;" v-html="renderMarkdown(report)"></div>
+          <div v-else-if="report" class="report-content" v-html="renderMarkdown(report)"></div>
           <div v-else class="empty-state">
             选择时间段后点击"生成诊断报告"，AI 顾问将为您分析财务状况
           </div>
@@ -54,20 +61,9 @@
             <span class="a" v-html="renderMarkdown(item.a)"></span>
           </div>
         </div>
-        <n-input
-          v-model:value="chatInput"
-          type="textarea"
-          placeholder="对报告有修改意见？或提出理财问题..."
-          :autosize="{minRows: 2}"
-          @keydown.enter.prevent="sendChat"
-          :disabled="chatLoading"
-        />
-        <n-button
-          type="primary"
-          style="margin-top: 12px;"
-          @click="sendChat"
-          :loading="chatLoading"
-        >
+        <n-input v-model:value="chatInput" type="textarea" placeholder="对报告有修改意见？或提出理财问题..." :autosize="{ minRows: 2 }"
+          @keydown.enter.prevent="sendChat" :disabled="chatLoading" />
+        <n-button type="primary" style="margin-top: 12px;" @click="sendChat" :loading="chatLoading">
           发送问题
         </n-button>
       </div>
@@ -77,7 +73,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { NButton, NInput, useMessage } from 'naive-ui'
+import { NButton, NInput, NSelect, useMessage } from 'naive-ui'
 import api from '../api'
 import { marked } from 'marked'
 
@@ -90,11 +86,43 @@ const chatInput = ref('')
 const chatLoading = ref(false)
 const message = useMessage()
 const qaListRef = ref<HTMLElement | null>(null)
-
 const chatHistory = ref<{ q: string; a: string }[]>([])
+
+// 家庭账本相关
+const families = ref<any[]>([])
+const selectedFamilyId = ref<number | null>(null)
+
+const familyOptions = computed(() => {
+  return [
+    { label: '个人账本', value: null },
+    ...families.value.map(f => ({ label: f.name, value: f.id }))
+  ]
+})
+
+const selectedFamilyName = computed(() => {
+  if (!selectedFamilyId.value) return ''
+  const family = families.value.find(f => f.id === selectedFamilyId.value)
+  return family?.name || ''
+})
+
+const fetchFamilies = async () => {
+  try {
+    const res = await api.get('/families')
+    families.value = res.data
+  } catch (error) {
+    console.error('获取家庭列表失败', error)
+  }
+}
+
+const onFamilyChange = () => {
+  // 切换账本后清空报告
+  report.value = ''
+  chatHistory.value = []
+}
 
 onMounted(() => {
   setQuickRange('month')
+  fetchFamilies()
 })
 
 const periodLabel = computed(() => {
@@ -143,13 +171,25 @@ async function generateReport() {
   loading.value = true
   report.value = ''
   try {
-    const params: Record<string, string> = { persona: persona.value }
+    const params: Record<string, any> = { persona: persona.value }
     if (startDate.value) params.startDate = startDate.value
     if (endDate.value) params.endDate = endDate.value
-    const res = await api.get('/api/advisor', { params })
+    if (selectedFamilyId.value) params.familyId = selectedFamilyId.value
+
+    const res = await api.get('/advisor', {
+      params,
+      timeout: 120000
+    })
     report.value = res.data.report
   } catch (e: any) {
-    message.error('生成报告失败，请检查后端和大模型是否正常运行')
+    console.error('生成报告失败:', e)
+    if (e.response && e.response.status === 401) {
+      message.error('登录已过期，请重新登录')
+      localStorage.removeItem('token')
+      window.location.href = '/login'
+    } else {
+      message.error('生成报告失败，请检查后端和大模型是否正常运行')
+    }
   } finally {
     loading.value = false
   }
@@ -165,24 +205,35 @@ async function sendChat() {
   await scrollToBottom()
 
   try {
-    const payload = {
+    const payload: Record<string, any> = {
       question,
       persona: persona.value,
       currentReport: report.value || ''
     }
-    const res = await api.post('/api/advisor/chat', payload)
+    if (selectedFamilyId.value) {
+      payload.familyId = selectedFamilyId.value
+    }
+    const res = await api.post('/advisor/chat', payload, {
+      timeout: 120000
+    })
     const answer = res.data.answer
     const isReportUpdate = res.data.isReportUpdate
 
     chatHistory.value[chatHistory.value.length - 1].a = answer
 
-    // 如果是报告局部修改，自动更新报告内容
     if (isReportUpdate && report.value) {
       report.value = answer
     }
   } catch (e: any) {
-    chatHistory.value[chatHistory.value.length - 1].a = '抱歉，请求失败，请检查后端和大模型是否正常运行。'
-    message.error('请求失败')
+    console.error('发送问题失败:', e)
+    if (e.response && e.response.status === 401) {
+      chatHistory.value[chatHistory.value.length - 1].a = '登录已过期，请重新登录'
+      localStorage.removeItem('token')
+      window.location.href = '/login'
+    } else {
+      chatHistory.value[chatHistory.value.length - 1].a = '抱歉，请求失败，请检查后端和大模型是否正常运行。'
+      message.error('请求失败')
+    }
   } finally {
     chatLoading.value = false
     await scrollToBottom()
@@ -222,6 +273,26 @@ const scrollToBottom = async () => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.family-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.family-selector span {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.scope-tag {
+  background: rgba(255, 107, 53, 0.2);
+  color: #ff6b35;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .date-range-picker {
@@ -289,14 +360,22 @@ const scrollToBottom = async () => {
 .loading-scan::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; height: 3px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
   background: linear-gradient(90deg, transparent, var(--accent-orange), transparent);
   animation: scanline 2s linear infinite;
 }
 
 @keyframes scanline {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .report-header {
@@ -348,32 +427,148 @@ const scrollToBottom = async () => {
   border-radius: 8px;
 }
 
-.greeting {
-  font-size: 1.05rem;
+.report-content {
+  font-size: 1rem;
   color: var(--text-main);
-  line-height: 1.8;
+  line-height: 1.7;
 }
 
-.greeting :deep(h1),
-.greeting :deep(h2),
-.greeting :deep(h3) {
+.report-content :deep(h1) {
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--accent-secondary);
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin: 24px 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--accent-orange);
 }
 
-.greeting :deep(ul),
-.greeting :deep(ol) {
-  padding-left: 20px;
+.report-content :deep(h2) {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  margin: 20px 0 12px 0;
+  padding-left: 12px;
+  border-left: 4px solid var(--accent-orange);
+}
+
+.report-content :deep(h3) {
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--text-main);
+  margin: 16px 0 8px 0;
 }
 
-.greeting :deep(strong) {
+.report-content :deep(p) {
+  margin-bottom: 12px;
+  text-align: justify;
+}
+
+.report-content :deep(strong) {
+  color: var(--accent-orange);
+  font-weight: 600;
+}
+
+.report-content :deep(ul),
+.report-content :deep(ol) {
+  padding-left: 24px;
+  margin-bottom: 12px;
+}
+
+.report-content :deep(li) {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.report-content :deep(li::marker) {
   color: var(--accent-orange);
 }
 
-.greeting :deep(p) {
-  margin-bottom: 12px;
+.report-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.report-content :deep(th) {
+  background: rgba(255, 107, 53, 0.15);
+  color: var(--accent-orange);
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.report-content :deep(td) {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.report-content :deep(tr:hover) {
+  background: rgba(255, 107, 53, 0.05);
+}
+
+.report-content :deep(.highlight-box) {
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 193, 7, 0.1));
+  border-left: 4px solid var(--accent-orange);
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.report-content :deep(.summary-card) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.report-content :deep(.summary-item) {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.report-content :deep(.summary-label) {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.report-content :deep(.summary-value) {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent-secondary);
+}
+
+.report-content :deep(.positive) {
+  color: #10b981;
+}
+
+.report-content :deep(.negative) {
+  color: #ef4444;
+}
+
+.report-content :deep(.warning) {
+  background: rgba(251, 191, 36, 0.1);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 12px 0;
+  border-left: 3px solid #fbbf24;
+}
+
+.report-content :deep(.success) {
+  background: rgba(16, 185, 129, 0.1);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 12px 0;
+  border-left: 3px solid #10b981;
 }
 
 .report-footer {

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>票据识别修复测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #1a1a2e;
+            color: #fff;
+        }
+
+        .container {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            color: #4ecdc4;
+            text-align: center;
+        }
+
+        .test-area {
+            margin: 20px 0;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 15px;
+            border: 1px solid #4ecdc4;
+            border-radius: 5px;
+            background: #0f3460;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        button {
+            background: #4ecdc4;
+            color: #1a1a2e;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #44a39e;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f3460;
+            border-radius: 5px;
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .success {
+            border-left-color: #4ecdc4;
+        }
+
+        .error {
+            border-left-color: #e74c3c;
+        }
+
+        .transaction-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(78, 205, 196, 0.1);
+            border-radius: 5px;
+        }
+
+        .transaction-amount {
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+
+        .transaction-desc {
+            color: #fff;
+        }
+
+        .transaction-category {
+            color: #f39c12;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔧 票据识别修复测试</h1>
+
+        <div class="test-area">
+            <textarea id="inputText"
+                placeholder="请输入票据信息，例如：
+帮我记录超市小票：进口零食大礼包 85.50元，海飞丝洗发水500ml 42.00元，环保购物袋 0.50元。应付总金额 128.00元。">帮我记录超市小票：进口零食大礼包 85.50元，海飞丝洗发水500ml 42.00元，环保购物袋 0.50元。应付总金额 128.00元。</textarea>
+            <br><br>
+            <button onclick="testParsing()">测试票据识别</button>
+        </div>
+
+        <div id="result" class="result">
+            <p>点击按钮开始测试...</p>
+        </div>
+    </div>
+
+    <script>
+        async function testParsing() {
+            const inputText = document.getElementById('inputText').value;
+            const resultDiv = document.getElementById('result');
+
+            resultDiv.innerHTML = '<p style="color: #f39c12;">正在解析...</p>';
+
+            try {
+                // 测试直接调用 Ollama API
+                const ollamaResult = await callOllamaDirect(inputText);
+                console.log('Ollama 直接调用结果:', ollamaResult);
+
+                // 测试调用后端 API
+                const backendResult = await callBackendAPI(inputText);
+
+                displayResult(backendResult);
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ 测试失败: ${error.message}</p>`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function callOllamaDirect(text) {
+            const response = await fetch('http://localhost:11434/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'qwen3:8b',
+                    prompt: `从"${text}"中提取账单信息，输出JSON：{"transactions":[{"amount":数字,"description":"描述","type":"expense","category":"分类"}]}`,
+                    stream: false,
+                    think: false,
+                    format: 'json'
+                })
+            });
+            return await response.json();
+        }
+
+        async function callBackendAPI(text) {
+            const response = await fetch('http://localhost:8000/api/ai/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + getCookie('token')
+                },
+                body: JSON.stringify({ text: text })
+            });
+            return await response.json();
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+
+            if (data.transactions && data.transactions.length > 0) {
+                let html = '<p style="color: #4ecdc4;">✅ 成功识别到以下账单：</p>';
+                data.transactions.forEach((tx, index) => {
+                    html += `
+                        <div class="transaction-item">
+                            <span class="transaction-amount">¥${tx.amount.toFixed(2)}</span>
+                            <span class="transaction-desc"> - ${tx.description}</span>
+                            <span class="transaction-category"> (${tx.category})</span>
+                        </div>
+                    `;
+                });
+                resultDiv.innerHTML = html;
+                resultDiv.className = 'result success';
+            } else {
+                resultDiv.innerHTML = `<p class="error">❌ 未能提取出账单信息</p>`;
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+
+</html>

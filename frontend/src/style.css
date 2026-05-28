@@ -11,11 +11,11 @@
   --accent-secondary: #faf0e6;
   --text-main: #e0e0e0;
   --text-muted: #888888;
-  
+
   --success-color: #4ade80;
   --warning-color: #fbbf24;
   --error-color: #f87171;
-  
+
   /* 弹性动画曲线 - 重量感与呼吸感 */
   --spring-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
   --transition-fast: 0.3s var(--spring-easing);
@@ -37,8 +37,12 @@ body {
 body::before {
   content: "";
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  pointer-events: none; /* 不阻挡点击事件 */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  /* 不阻挡点击事件 */
   z-index: 9999;
   /* SVG 噪点 */
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
@@ -47,7 +51,8 @@ body::before {
 
 /* 自定义卡片类 (代替枯燥的居中和直角) */
 .aesthetic-card {
-  background: rgba(255, 255, 255, 0.03); /* 玻璃态极简底色 */
+  background: rgba(255, 255, 255, 0.03);
+  /* 玻璃态极简底色 */
   border-radius: 16px;
   padding: 32px;
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -59,7 +64,8 @@ body::before {
 /* 悬停时的重量感与张力 */
 .aesthetic-card:hover {
   transform: scale(1.02) translateY(-4px);
-  box-shadow: 0 16px 48px rgba(255, 107, 53, 0.08); /* 边缘泛起极其微弱的橙光 */
+  box-shadow: 0 16px 48px rgba(255, 107, 53, 0.08);
+  /* 边缘泛起极其微弱的橙光 */
   border-color: rgba(255, 107, 53, 0.2);
 }
 
@@ -68,13 +74,16 @@ body::before {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-orange);
 }
